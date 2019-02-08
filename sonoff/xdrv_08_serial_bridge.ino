@@ -64,6 +64,16 @@ void SerialBridgeInput(void)
     serial_bridge_buffer[serial_bridge_in_byte_counter] = 0;  // serial data completed
     snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("{\"" D_JSON_SSERIALRECEIVED "\":\"%s\"}"), serial_bridge_buffer);
     MqttPublishPrefixTopic_P(RESULT_OR_TELE, PSTR(D_JSON_SSERIALRECEIVED));
+
+    //####################### RECEPCION Y PUBLICACION MQTT DE MENSAJES POR SERIAL ###########################################
+
+    if (serial_bridge_buffer != 0){
+      MqttPublishSerial(serial_bridge_buffer);
+      snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s"), serial_bridge_buffer);
+      MqttPublishTeleSerial(RESULT_OR_TELE, PSTR(D_JSON_SSERIALRECEIVED), false);
+    }
+
+    //########################################################################################################################
 //    XdrvRulesProcess();
     serial_bridge_in_byte_counter = 0;
   }
