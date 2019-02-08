@@ -99,6 +99,36 @@ bool mqtt_allowed = false;                  // MQTT enabled and parameters valid
 
 PubSubClient MqttClient(EspClient);
 
+//################ FUNCION PARA ENVIAR MENSAJES DEL SERIAL POR MQTT ##################
+void MqttPublishSerial(const char* carga_serial)
+{
+  #define STRSIZE 80
+  const char * serial = carga_serial;
+  char topic[STRSIZE];
+  char payload[STRSIZE];
+  int i=0;
+  int j=0;
+  while (serial[i] != ';')
+  {
+      topic[i]=serial[i];
+      i++;
+  }
+  topic[i]='\0';
+  i++;
+  while (serial[i] != '\0')
+  {
+      payload[j]=serial[i];
+      i++;
+      j++;
+  }
+  payload[j]='\0';
+
+  MqttClient.publish(topic, payload);
+  //MqttClient.publish("tele/sensar/ppstest/tasmota-wemos-d1-",serial);
+  Serial.printf("Mensaje enviado!, %s , %s",topic, payload);
+}
+//#############################################################################################
+
 bool MqttIsConnected(void)
 {
   return MqttClient.connected();
@@ -334,6 +364,37 @@ void MqttPublishPrefixTopic_P(uint8_t prefix, const char* subtopic)
 {
   MqttPublishPrefixTopic_P(prefix, subtopic, false);
 }
+
+//################ FUNCION PARA ENVIAR MENSAJES A TELE POR MQTT CUANDO RECIBO SERIAL ##################
+void MqttPublishTeleSerial(uint8_t prefix, const char* subtopic, boolean retained)
+{
+/* prefix 0 = cmnd using subtopic
+ * prefix 1 = stat using subtopic
+ * prefix 2 = tele using subtopic
+ * prefix 4 = cmnd using subtopic or RESULT
+ * prefix 5 = stat using subtopic or RESULT
+ * prefix 6 = tele using subtopic or RESULT
+ */
+  char romram[33];
+  char stopic[TOPSZ];
+
+  snprintf_P(romram, sizeof(romram), ((prefix > 3) && !Settings.flag.mqtt_response) ? S_RSLT_RESULT : subtopic);
+  for (byte i = 0; i < strlen(romram); i++) {
+    romram[i] = toupper(romram[i]);
+  }
+  prefix &= 3;
+  GetTopic_P(stopic, prefix, mqtt_topic, romram);
+
+  char mensaje[] = "Mensaje enviado!: ";
+
+  char combined[100] = {0};
+
+  strcat(combined, mensaje);
+  strcat(combined, stopic); 
+
+  MqttPublish(combined, false);
+}
+//####################################################################################################
 
 void MqttPublishPowerState(uint8_t device)
 {
